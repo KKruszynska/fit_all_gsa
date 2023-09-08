@@ -20,17 +20,18 @@ def ogle_xmatch(names, ra, dec):
     """
     rad = 1.0 / 60. / 60.  # 0.5 arcsec search radius
     xmatch_result = []
-    ogle_years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2023]
+    ogle_years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2022, 2023]
     for year in ogle_years:
-        url = r'http://ogle.astrouw.edu.pl/ogle4/ews/%d/ews.html' % year
-        tables = pd.read_html(url)
-        catalog = SkyCoord(ra=tables[0]["RA (J2000)"].values[:], dec=tables[0]["Dec (J2000)"].values[:],
+        url = r'https://www.astrouw.edu.pl/ogle/ogle4/ews/%d/lenses.par' % year
+        tables = pd.read_csv(url, header=0, delim_whitespace=True)
+        # print(tables)
+        catalog = SkyCoord(ra=tables["RA(J2000)"].values[:], dec=tables["Dec(J2000)"].values[:],
                            unit=(u.hourangle, u.deg))
 
         c = SkyCoord(ra=ra * u.degree, dec=dec * u.degree)
         idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.deg)
         for i in range(len(idxc)):
-            xmatch_result.append((names[idxc[i]], "OGLE-%s"%tables[0]["Event"].values[idxcatalog[i]]))
+            xmatch_result.append((names[idxc[i]], "OGLE-%s"%tables["Event"].values[idxcatalog[i]]))
 
     return xmatch_result
 
@@ -175,10 +176,31 @@ def asassn_xmatch(names, ra, dec):
     return xmatch_result
 
 def exclude_KMTNet_fields(names, ra, dec):
-    KMTNet_fields = pd.read_csv("kmtnet_zona.csv", header=0)
+    KMTNet_fields = np.array([[264.00, -37.40],
+                        [270.50, -37.40],
+                        [270.50, -33.75],
+                        [272.50, -33.75],
+                        [272.50, -32.00],
+                        [275.50, -32.00],
+                        [275.50, -25.30],
+                        [275.60, -25.30],
+                        [275.60, -21.90],
+                        [272.00, -21.90],
+                        [272.00, -23.00],
+                        [270.40, -23.00],
+                        [270.40, -20.50],
+                        [264.50, -20.50],
+                        [264.50, -22.70],
+                        [262.00, -22.70],
+                        [262.00, -26.25],
+                        [260.50, -26.25],
+                        [260.50, -31.40],
+                        [262.00, -31.40],
+                        [262.00, -36.00],
+                        [264.00, -36.00]])
     remove_idx = []
 
-    exclusion_zone = Polygon(zip(KMTNet_fields["ra"], KMTNet_fields["dec"]))
+    exclusion_zone = Polygon(zip(KMTNet_fields[:,0], KMTNet_fields[:,1]))
     for i in range(len(names)):
         point = Point(ra[i], dec[i])
         if(exclusion_zone.contains(point)):

@@ -67,6 +67,7 @@ output = open(output_file_name, "w")
 for i in range(len(names)):
     if(i in idx_in_kmtn_zone):
         print("%s: Within KMTNet exclusion zone"%(names[i]))
+        count += 1
         continue
 
     if(count % 100 == 0):

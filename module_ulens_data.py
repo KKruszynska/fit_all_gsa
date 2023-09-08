@@ -7,7 +7,7 @@ import urllib
 
 from astropy.time import Time
 
-from etienne_extract_one_alert_radec import getztfmars
+# from etienne_extract_one_alert_radec import getztfmars
 
 
 def select_gsa_events(time_min, time_max):
@@ -220,7 +220,10 @@ def get_lightcurve_OGLE_EWS(name):
     year = text[1]
     num = text[3]
 
-    url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/blg-%s/phot.dat") % (year, num)
+    if(text[2] == "BLG"):
+        url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/blg-%s/phot.dat") % (year, num)
+    else:
+        url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/dg-%s/phot.dat") % (year, num)
 
     req = requests.get(url).content
     ogleLc = pd.read_csv(io.StringIO(req.decode('utf-8')), delimiter=" ", header=None)
