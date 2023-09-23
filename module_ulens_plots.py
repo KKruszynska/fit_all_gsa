@@ -58,8 +58,8 @@ def plot_data(name, datasets, n_telescopes, tel_labels, tmin, tmax):
     else:
         i = 0
         for data in datasets:
-            color = custom_color[0]
-            marker = custom_marker[0]
+            color = custom_color[i]
+            marker = custom_marker[i]
             plt.errorbar(data[0, :] - 2450000., data[1, :], yerr=data[2, :], color=color, marker=marker,
                          label=tel_labels[i], linestyle='')
             i += 1
