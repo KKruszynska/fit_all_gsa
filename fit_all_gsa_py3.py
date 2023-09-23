@@ -1,11 +1,8 @@
-import collections.abc
 import sys
 
 from datetime import datetime, timedelta
 
 import numpy as np
-import requests
-import json
 
 from astropy.coordinates import SkyCoord
 import astropy.units as u
@@ -16,7 +13,6 @@ from pyLIMA import event
 from pyLIMA import telescopes
 from pyLIMA.fits import TRF_fit
 from pyLIMA.models import PSPL_model
-from pyLIMA.outputs import pyLIMA_plots
 
 # import module_findingcharts, module_gaia_ulens
 from module_gaia_xmatch import ogle_xmatch, kmtn_xmatch, moa_xmatch, asassn_xmatch, exclude_KMTNet_fields
@@ -27,16 +23,30 @@ import module_ulens_data as mud
 time_max = datetime.today()
 time_min = time_max - timedelta(days=14)
 base_file_output_name = "new_candidates"
+hcz_zone = True
 
-if (len(sys.argv) != 4 and len(sys.argv) != 1):
+if (len(sys.argv) not in [4, 5] and len(sys.argv) != 1):
     print("Wrong number of arguments. Provide start date, end date and output file name base.")
     print("Run program as follows:")
     print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base")
+    print("Or, to turn off high-cadence zone exlusion:")
+    print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base hcz_zone=False")
     quit()
 if(len(sys.argv) == 4):
     time_min = sys.argv[1] # has to be yyyy-mm-dd
     time_max = sys.argv[2] # has to be yyyy-mm-dd
     base_file_output_name = sys.argv[3]
+if(len(sys.argv) == 5):
+    time_min = sys.argv[1] # has to be yyyy-mm-dd
+    time_max = sys.argv[2] # has to be yyyy-mm-dd
+    base_file_output_name = sys.argv[3]
+    if (sys.argv[4].split("=")[1] == 'False'):
+        hcz_zone = False
+    else:
+        print("High cadence zone not turned off!")
+        print("To turn off high-cadence zone exlusion:")
+        print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base hcz_zone=False")
+        quit()
 
 # find events in the required time range
 names, ra, dec = mud.select_gsa_events(time_min, time_max)
@@ -64,11 +74,19 @@ output_file_name = "%s_part_%d.html" % (base_file_output_name, num_file)
 print("Num file: ", num_file)
 output = open(output_file_name, "w")
 
+comment_hcz = ""
 for i in range(len(names)):
-    if(i in idx_in_kmtn_zone):
-        print("%s: Within KMTNet exclusion zone"%(names[i]))
-        count += 1
-        continue
+    if(hcz_zone):
+        if (i in idx_in_kmtn_zone):
+            print("%s: Within KMTNet exclusion zone"%(names[i]))
+            count += 1
+            continue
+    else:
+        if (i in idx_in_kmtn_zone):
+            comment_hcz = '<font color="red"><b>In HCZ</b></font>'
+        else:
+            comment_hcz = '<font color="black">Outside HCZ</font>'
+
 
     if(count % 100 == 0):
         output_file_name = "%s_part_%d.html" % (base_file_output_name, num_file)
@@ -87,7 +105,7 @@ for i in range(len(names)):
                      '<font color="#d65302"><b>abs(b)>15 deg</b></font>')
         output.write(
             '<table border="1" style="width:1200px">\n <tr><th>count</th>\n <th>i</th>\n <th>pub name</th>\n <th>light curve</th>\n <th>lc with follow-up</th>\n' \
-            '<th>ulens fit</th>\n <th>Images</th>\n <th>ra[deg]</th>\n <th>dec[deg]</th>\n <th>l [deg]</th>\n <th>b [deg]</th>\n')
+            '<th>Last ~200 days</th>\n <th>ulens fit</th>\n <th>Images</th>\n <th>ra[deg]</th>\n <th>dec[deg]</th>\n <th>l [deg]</th>\n <th>b [deg]</th>\n')
 
     alpha = ra[i]
     delta = dec[i]
@@ -115,6 +133,7 @@ for i in range(len(names)):
 
     output.write('<td><b>%d</b></td>\n' % (i))
     output.write('<td><a href="https://gsaweb.ast.cam.ac.uk/alerts/alert/%s">%s</a>\n' % (publishedas, publishedas))
+    output.write('<br>%s\n' % (comment_hcz))
 
     ogle_times, ogle_mags, ogle_errs = 0,0,0
     if len(ogle_names) > 0 and publishedas in ogle_names[:,0]:
@@ -155,15 +174,15 @@ for i in range(len(names)):
     # Microlensing model
     # Setting up a pyLIMA events
     # Gaia only event
-    gaia_event = event.Event()
-    gaia_event.name = publishedas
-    gaia_event.ra, gaia_event.dec = alpha, delta
-    print("Gaia only event created.")
+    # gaia_event = event.Event()
+    # gaia_event.name = publishedas
+    # gaia_event.ra, gaia_event.dec = alpha, delta
+    # print("Gaia only event created.")
 
     # Gaia and follow-up (first we check if data is available)
     gaia_fup_event = event.Event()
     gaia_fup_event.name = publishedas
-    gaia_fup_event.ra, gaia_event.dec = alpha, delta
+    gaia_fup_event.ra, gaia_fup_event.dec = alpha, delta
     print("Gaia + fup event created.")
 
     # Time to load data and add telescopes...
@@ -181,7 +200,7 @@ for i in range(len(names)):
                                           light_curve_units=['JD', 'mag', 'err_mag'],
                                           location='Space', spacecraft_name='Gaia')
     # gaia_event.telescopes.append(telescope_gaia)
-    # gaia_fup_event.telescopes.append(telescope_gaia)
+    gaia_fup_event.telescopes.append(telescope_gaia)
     n_telescopes += 1
     print("%s: %s: Gaia data added.\n" % (datetime.utcnow(), publishedas))
 
@@ -198,7 +217,7 @@ for i in range(len(names)):
                                              light_curve_names=['time', 'flux', 'err_flux'],
                                              light_curve_units=['JD', 'flux', 'err_flux'],
                                              location='Earth')
-        # gaia_fup_event.telescopes.append(telescope_moa)
+        gaia_fup_event.telescopes.append(telescope_moa)
         n_telescopes += 1
         print("%s : %s: MOA data added.\n" % (datetime.utcnow(), publishedas))
 
@@ -206,7 +225,7 @@ for i in range(len(names)):
     if (type(ogle_times) is not int):
         ogle_data = np.vstack((ogle_times, ogle_mags, ogle_errs))
         datasets.append(ogle_data)
-        telescope_labels.append("OGLE EWS")
+        telescope_labels.append("OGLE")
         if (t_last < ogle_times[-1]):
             t_last = ogle_times[-1]
         telescope_ogle = telescopes.Telescope(name='OGLE',
@@ -215,7 +234,7 @@ for i in range(len(names)):
                                              light_curve_names=['time', 'mag', 'err_mag'],
                                              light_curve_units=['JD', 'mag', 'err_mag'],
                                              location='Earth')
-        # gaia_fup_event.telescopes.append(telescope_ogle)
+        gaia_fup_event.telescopes.append(telescope_ogle)
         n_telescopes += 1
         print("%s : %s: OGLE EWS data added.\n" % (datetime.utcnow(), publishedas))
 
@@ -227,16 +246,16 @@ for i in range(len(names)):
             if(type(ztime) is not float):
                 data = np.vstack((ztime, zmags, zerrs))
                 datasets.append(data)
-                telescope_labels.append("ZTF_DR_"+ztf_band[b])
+                telescope_labels.append("ZTF_"+ztf_band[b])
                 if (t_last < ztime[-1]):
                     t_last = ztime[-1]
-                telescope_ztf_dr = telescopes.Telescope(name='ZTF',
+                telescope_ztf_dr = telescopes.Telescope(name='ZTF_'+ztf_band[b],
                                                      camera_filter=ztf_band[b],
                                                      light_curve=(ztime, zmags, zerrs),
                                                      light_curve_names=['time', 'mag', 'err_mag'],
                                                      light_curve_units=['JD', 'mag', 'err_mag'],
                                                      location='Earth')
-                # gaia_fup_event.telescopes.append(telescope_ztf_dr)
+                gaia_fup_event.telescopes.append(telescope_ztf_dr)
                 n_telescopes += 1
             b += 1
         print("%s : %s: ZTF Data Release data added.\n" % (datetime.utcnow(), publishedas))
@@ -259,12 +278,12 @@ for i in range(len(names)):
     # Finally, lets check if the event looks fine...
     # gaia_event.find_survey('Gaia')
     # gaia_event.check_event()
-    # gaia_fup_event.find_survey('Gaia')
-    # gaia_fup_event.check_event()
+    gaia_fup_event.find_survey('Gaia')
+    gaia_fup_event.check_event()
 
     # Initial guess
-    # data_smooth = savgol_filter(gaia_mags, 14, 4)
-    # t0guess = gaia_mags[np.argmin(data_smooth)]
+    data_smooth = savgol_filter(gaia_mags, 14, 4)
+    t0guess = gaia_mags[np.argmin(data_smooth)]
 
     # Fit PSPL without blending to Gaia only data
     # pspl_gaia = PSPL_model.PSPLmodel(gaia_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
@@ -272,11 +291,11 @@ for i in range(len(names)):
     # gaia_fit.fit()
 
     # Fit PSPL without blending to Gaia only data
-    # pspl_fup = PSPL_model.PSPLmodel(gaia_fup_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
-    # fup_fit = TRF_fit.TRFfit(pspl_fup)
-    # fup_fit.fit()
-    # best_params = fup_fit.fit_results['best_model']
-    # chi2 = fup_fit.fit_results['chi2']
+    pspl_fup = PSPL_model.PSPLmodel(gaia_fup_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
+    fup_fit = TRF_fit.TRFfit(pspl_fup)
+    fup_fit.fit()
+    best_params = fup_fit.fit_results['best_model']
+    chi2 = fup_fit.fit_results['chi2']
 
     # Plots
     # times for plot
@@ -288,10 +307,11 @@ for i in range(len(names)):
         fup_uri = plot_data(publishedas, datasets[0], n_telescopes, telescope_labels, tmin, tmax)
         zoom_uri = plot_data(publishedas, datasets[0], n_telescopes, telescope_labels, tmax-270, tmax)
     else:
-        gaia_uri = plot_data(publishedas, datasets[0], 1, telescope_labels[0], tmin, tmax)
+        gaia_uri = plot_data(publishedas, datasets[0], 1, telescope_labels, tmin, tmax)
         fup_uri = plot_data(publishedas, datasets, n_telescopes, telescope_labels, tmin, tmax)
         zoom_uri = plot_data(publishedas, datasets, n_telescopes, telescope_labels, tmax-270, tmax)
-    # model_uri = plot_lightcurve(publishedas, pspl_fup, fup_gaia.fit_parameters, tmin-200, tmax+30)
+
+    model_uri = plot_lightcurve(publishedas, fup_fit, pspl_fup, tmin + 2450000. - 200., tmax + 2450000. + 30.)
 
     output.write('<td>')
     output.write('<IMG src = "%s" width="400" height="300"/>' % gaia_uri)
@@ -305,12 +325,12 @@ for i in range(len(names)):
     output.write(lineout)
     output.write('</td>\n')
 
-    # lineout = ('<td><IMG src = "%s" width="400" height="300"><br>fit: t0=%f u0=%f tE=%f piEN=%f \
-    # piEE= %f Fs=%f Fb=%f chi2=%f')%(
-    #     model_uri, best_params[0], best_params[1], best_params[2], best_params[3],
-    #     best_params[4], best_params[5], best_params[6], chi2)
-    # output.write(lineout)
-    # output.write('</td>\n')
+    lineout = ('<td><IMG src = "%s" width="400" height="300"><br>fit: t0=%f u0=%f tE=%f piEN=%f \
+    piEE= %f Fs=%f Fb=%f chi2=%f')%(
+        model_uri, best_params[0], best_params[1], best_params[2], best_params[3],
+        best_params[4], best_params[5], 0.0, chi2)
+    output.write(lineout)
+    output.write('</td>\n')
 
     # SDSS
     output.write(
