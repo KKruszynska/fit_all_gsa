@@ -1,42 +1,72 @@
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import cycler
 
 import urllib, base64
 import requests
 import io
-import os
 
-from pyLIMA.outputs.pyLIMA_plots import create_telescopes_to_plot_model
+from pyLIMA.outputs import pyLIMA_plots
+from cycler import cycler
 from pyLIMA import toolbox as ptool
-import  pyLIMA.fits.objective_functions as pfof
+
+from datetime import datetime
+from astropy.time import Time
+
+def color_marker_dicts():
+    name_telescope = ['ASASSN_g', 'LCO_1m_gp', 'ZTF_al_g', 'ZTF_g',
+                      'ASASSN_V',
+                      'Gaia', 'LCO_1m_rp', 'ZTF_al_r', 'ZTF_r',
+                      'KMTNet', 'LCO_1m_ip', 'MOA', 'OGLE', 'ZTF_al_i', 'ZTF_i',
+                      'Danish_Lucky_Z'
+                      ]
+    n_telescopes = len(name_telescope)
+
+    # colors
+    color = plt.cm.jet(np.linspace(0.01, 0.99, n_telescopes))  # This returns RGBA; convert:
+    hexcolor = ['#' + format(int(i[0] * 255), 'x').zfill(2) + format(int(i[1] * 255), 'x').zfill(2) +
+                format(int(i[2] * 255), 'x').zfill(2) for i in color]
+    # markers
+    MARKER_SYMBOLS = np.array(
+        [['o', '.', '*', 'v', '^', '<', '>', 's', 'p', 'd', 'x'] * 10])
+    marker_cycle = MARKER_SYMBOLS[0][:n_telescopes]
+
+    color_dict = dict(zip(name_telescope, hexcolor))
+    marker_dict = dict(zip(name_telescope, marker_cycle))
+
+    return color_dict, marker_dict
 
 def plot_data(name, datasets, n_telescopes, tel_labels, tmin, tmax):
+    color_dict, marker_dict = color_marker_dicts()
+    custom_color, custom_marker = [], []
+    for lab in tel_labels:
+        custom_color.append(color_dict[lab])
+        custom_marker.append(marker_dict[lab])
+
     fig = plt.figure()
     plt.grid(color='0.95')
     plt.title(name)
     plt.gca().invert_yaxis()
-    color = plt.cm.jet(np.linspace(0.01, 0.99, n_telescopes))  # This returns RGBA; convert:
-    hexcolor = ['#' + format(int(i[0] * 255), 'x').zfill(2) + format(int(i[1] * 255), 'x').zfill(2) +
-                format(int(i[2] * 255), 'x').zfill(2) for i in color]
-    matplotlib.rcParams['axes.prop_cycle'] = cycler.cycler(color=hexcolor)
 
     if(n_telescopes == 1):
-        color = plt.rcParams["axes.prop_cycle"].by_key()["color"][0]
+        color = custom_color[0]
+        marker = custom_marker[0]
         # print(type(datasets))
         # print(len(datasets))
         # print("----------------------------------------------")
-        plt.errorbar(datasets[0,:] - 2450000., datasets[1,:], yerr=datasets[2,:], color=color, marker='o',
+        plt.errorbar(datasets[0,:] - 2450000., datasets[1,:], yerr=datasets[2,:], color=color, marker=marker,
                      label=tel_labels, linestyle='')
     else:
         i = 0
         for data in datasets:
-            color = plt.rcParams["axes.prop_cycle"].by_key()["color"][i]
-            plt.errorbar(data[0, :] - 2450000., data[1, :], yerr=data[2, :], color=color, marker='o',
+            color = custom_color[0]
+            marker = custom_marker[0]
+            plt.errorbar(data[0, :] - 2450000., data[1, :], yerr=data[2, :], color=color, marker=marker,
                          label=tel_labels[i], linestyle='')
             i += 1
+
+    today = Time.now()
+    jd_today = today.jd
+    plt.axvline(x=jd_today, label='Now', ls='--', color='darkslategray')
 
     plt.ylabel("magnitude")
     plt.xlabel("JD-2450000")
@@ -56,131 +86,70 @@ def plot_data(name, datasets, n_telescopes, tel_labels, tmin, tmax):
 
 # I had to modify original pyLIMA plotting functions to get the desired effect
 # Original code by Bachelet et al.
-def plot_lightcurve(name, microlensing_model, model_parameters, tmin, tmax):
-    # ------------------- Same as in pyLIMA ------------------------------------
-    # Change matplotlib default colors
-    n_telescopes = len(microlensing_model.event.telescopes)
-    color = plt.cm.jet(np.linspace(0.01, 0.99, n_telescopes))  # This returns RGBA; convert:
-    hexcolor = ['#' + format(int(i[0] * 255), 'x').zfill(2) + format(int(i[1] * 255), 'x').zfill(2) +
-                format(int(i[2] * 255), 'x').zfill(2) for i in color]
-    matplotlib.rcParams['axes.prop_cycle'] = cycler.cycler(color=hexcolor)
+def plot_lightcurve(name, fit, model, tmin, tmax):
+    # ------------------- Custom colors  ------------------------------------
+    color_dict, marker_dict = color_marker_dicts()
+    custom_color, custom_marker = [], []
+    for tel in model.event.telescopes:
+        custom_color.append(color_dict[tel.name])
+        custom_marker.append(marker_dict[tel.name])
     # -------------------------------------------------------------------------
-    fig = plt.figure()
-    plt.grid(color='0.95')
-    grid = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
-    axes = plt.subplot(grid[0])
-    plt.gca().invert_yaxis()
-    plt.title(name)
-    plt.ylabel("magnitude")
-    plt.xlim(tmin - 2450000., tmax - 2450000.)
-    # plot data
-    # ------------------- Same as in pyLIMA ------------------------------------
-    pyLIMA_parameters = microlensing_model.compute_pyLIMA_parameters(model_parameters)
-    list_of_telescopes = create_telescopes_to_plot_model(microlensing_model, pyLIMA_parameters)
-    telescopes_names = np.array([i.name for i in microlensing_model.event.telescopes])
 
-    index = 0
+    ### Find the telescope fluxes if needed
 
-    ref_names = []
-    ref_locations = []
-    ref_magnification = []
-    ref_fluxes = []
+    if len(fit.fit_results['best_model']) != len(model.model_dictionnary):
+        telescopes_fluxes = model.find_telescopes_fluxes(fit.fit_results['best_model'])
+        telescopes_fluxes = [getattr(telescopes_fluxes, key) for key in
+                             telescopes_fluxes._fields]
 
-    for ref_tel in list_of_telescopes:
-        model_magnification = microlensing_model.model_magnification(ref_tel, pyLIMA_parameters)
-        microlensing_model.derive_telescope_flux(ref_tel, pyLIMA_parameters, model_magnification)
+        model_parameters1 = np.r_[fit.fit_results['best_model'], telescopes_fluxes]
 
-        f_source = getattr(pyLIMA_parameters, 'fsource_' + ref_tel.name)
-        f_blend = getattr(pyLIMA_parameters, 'fblend_' + ref_tel.name)
+    else:
 
-        ref_names.append(ref_tel.name)
-        ref_locations.append(ref_tel.location)
-        ref_magnification.append(model_magnification)
-        ref_fluxes.append([f_source, f_blend])
+        model_parameters1 = fit.fit_results['best_model']
 
-    for ind, tel in enumerate(microlensing_model.event.telescopes):
-        if tel.lightcurve_flux is not None:
+    # custom colors and markers
+    custom_cycler = (cycler(color=custom_color))
 
-            if tel.location == 'Earth':
-                ref_index = np.where(np.array(ref_locations) == 'Earth')[0][0]
+    pyLIMA_plots.MARKERS_COLORS = custom_cycler
+    pyLIMA_plots.MARKER_SYMBOLS = np.array([custom_marker])
+    # ------------------- Plotting  ------------------------------------
+    fig, axes = plt.subplots(2, 1, height_ratios=[3, 1])
+    # ------------------- Plotting lc ------------------------------------
+    axes[0].title.set_text(name)
+    axes[0].set_ylabel("magnitude")
+    axes[0].grid(True, color='0.95')
+    axes[0].invert_yaxis()
 
-            else:
-                ref_index = np.where(np.array(ref_names) == tel.name)[0][0]
+    axes[0].set_xlim(tmin, tmax)
 
-            residus_in_mag = pfof.photometric_residuals_in_magnitude(
-                    tel, microlensing_model,
-                    pyLIMA_parameters)
-            if ind == 0:
-                reference_source = ref_fluxes[ind][0]
-                reference_blend = ref_fluxes[ind][1]
-                index += 1
+    # Plot model1 and align data to it
+    pyLIMA_plots.plot_photometric_models(axes[0], model, model_parameters1, plot_unit='Mag')
+    pyLIMA_plots.plot_aligned_data(axes[0], model, model_parameters1, plot_unit='Mag')
 
-            time_mask = []
-            for time in tel.lightcurve_flux['time'].value:
-                time_index = np.where(list_of_telescopes[ref_index].lightcurve_flux[
-                                          'time'].value == time)[0][0]
-                time_mask.append(time_index)
+    # Plot today's date
+    today = Time.now()
+    jd_today = today.jd
+    axes[0].axvline(x=jd_today, label='Now', ls='--', color='darkslategray')
 
-            model_flux = reference_source * ref_magnification[ref_index][
-                time_mask] + reference_blend
-            magnitude = ptool.brightness_transformation.ZERO_POINT - 2.5 * \
-                        np.log10(model_flux)
-
-            color = plt.rcParams["axes.prop_cycle"].by_key()["color"][ind]
-            marker = str(MARKER_SYMBOLS[0][ind])
-            # ----------------------------------------------------------------------------------------
-            axes.errorbar(tel.lightcurve_magnitude['time'].value,
-                          magnitude + residus_in_mag,
-                          tel.lightcurve_magnitude['err_mag'].value,
-                          color=color, marker=marker,
-                          label=tel.name, linestyle='')
 
     # plot model
-    # ------------------- Same as in pyLIMA ------------------------------------
-    tel = list_of_telescopes[0]
-    ref_source = getattr(pyLIMA_parameters, 'fsource_' + tel.name)
-    ref_blend = getattr(pyLIMA_parameters, 'fblend_' + tel.name)
+    # ------------------- Plotting residuals  ------------------------------------
+    axes[1].set_ylabel("Res")
+    axes[1].grid(True, color='0.95')
+    axes[1].invert_yaxis()
+    axes[1].set_xlim(tmin, tmax)
+    axes[1].set_ylim(-0.5, 0.5)
 
-    magni = microlensing_model.model_magnification(tel, pyLIMA_parameters)
-    microlensing_model.derive_telescope_flux(tel, pyLIMA_parameters, magni)
+    pyLIMA_plots.plot_residuals(axes[1], model, model_parameters1, plot_unit='Mag')
 
-    magnitude = ptool.brightness_transformation.ZERO_POINT - 2.5 * np.log10(ref_source * magni + ref_blend)
-    index_color = np.where(tel.name == telescopes_names)[0][0]
-    color = plt.rcParams["axes.prop_cycle"].by_key()["color"][index_color]
-    # ------------------------------------------------------------------------------
-    axes.plot(tel.lightcurve_magnitude['time'].value, magnitude, c=color, label=name, linestyle='-')
+    axes[1].axhline(y=0, color='black', ls='-')
+    axes[1].axvline(x=jd_today, label='Now', ls='--', color='darkslategray')
 
-    plt.grid(True)
-    plt.legend(loc='best')
-
-    axes = plt.subplot(grid[1])
-    # plotting residuals
-    # ------------------- Same as in pyLIMA ------------------------------------
-    for ind, tel in enumerate(microlensing_model.event.telescopes):
-
-        if tel.lightcurve_flux is not None:
-            residus_in_mag = \
-                pyLIMA.fits.objective_functions.photometric_residuals_in_magnitude(
-                    tel, microlensing_model, pyLIMA_parameters)
-
-            color = plt.rcParams["axes.prop_cycle"].by_key()["color"][ind]
-            marker = str(MARKER_SYMBOLS[0][ind])
-
-            plots.plot_light_curve_magnitude(tel.lightcurve_magnitude['time'].value,
-                                             residus_in_mag,
-                                             tel.lightcurve_magnitude['err_mag'].value,
-                                             figure_axe=figure_axe, color=color,
-                                             marker=marker, name=tel.name)
-
-    # ---------------------------------------------------------------------------------
-            axes.errorbar(tel.lightcurve_magnitude['time'].value,
-                  residus_in_mag,
-                  tel.lightcurve_magnitude['err_mag'].value,
-                  color=color, marker=marker, linestyle='')
-
-    plt.ylabel("res")
-    plt.xlabel("JD-2450000.")
-    plt.xlim(tmin - 2450000., tmax - 2450000.)
+    axes[0].legend(shadow=True, fontsize='large',
+                   bbox_to_anchor=(0, 1.02, 1, 0.2),
+                   loc="lower left",
+                   mode="expand", borderaxespad=0, ncol=3)
 
 
     img = io.BytesIO()
