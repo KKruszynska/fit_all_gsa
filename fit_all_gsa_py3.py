@@ -311,7 +311,11 @@ for i in range(len(names)):
         fup_uri = plot_data(publishedas, datasets, n_telescopes, telescope_labels, tmin, tmax)
         zoom_uri = plot_data(publishedas, datasets, n_telescopes, telescope_labels, tmax-270, tmax)
 
-    model_uri = plot_lightcurve(publishedas, fup_fit, pspl_fup, tmin + 2450000. - 200., tmax + 2450000. + 30.)
+    model_uri = ""
+    try:
+        model_uri = plot_lightcurve(publishedas, fup_fit, pspl_fup, tmin + 2450000. - 200., tmax + 2450000. + 30.)
+    except:
+        print("exeption happened")
 
     output.write('<td>')
     output.write('<IMG src = "%s" width="400" height="300"/>' % gaia_uri)
@@ -325,10 +329,13 @@ for i in range(len(names)):
     output.write(lineout)
     output.write('</td>\n')
 
-    lineout = ('<td><IMG src = "%s" width="400" height="300"><br>fit: t0=%f u0=%f tE=%f piEN=%f \
-    piEE= %f Fs=%f Fb=%f chi2=%f')%(
-        model_uri, best_params[0], best_params[1], best_params[2], best_params[3],
-        best_params[4], best_params[5], 0.0, chi2)
+    if(len(model_uri)>0):
+        lineout = ('<td><IMG src = "%s" width="400" height="300"><br>fit: t0=%f u0=%f tE=%f piEN=%f \
+        piEE= %f Fs=%f Fb=%f chi2=%f')%(
+            model_uri, best_params[0], best_params[1], best_params[2], best_params[3],
+            best_params[4], best_params[5], 0.0, chi2)
+    else:
+        lineout = '<td>Failed to find valid microlensing model.'
     output.write(lineout)
     output.write('</td>\n')
 
