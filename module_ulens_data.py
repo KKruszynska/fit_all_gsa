@@ -174,7 +174,7 @@ def get_gaia_errors(mag):
     return err
 
 
-def get_lighcurve_MOA(name, field):
+def get_lightcurve_MOA(name, field):
     text = name.split('-')
     # print(text)
     year = text[1]
