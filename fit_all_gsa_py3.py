@@ -291,11 +291,16 @@ for i in range(len(names)):
     # gaia_fit.fit()
 
     # Fit PSPL without blending to Gaia only data
-    pspl_fup = PSPL_model.PSPLmodel(gaia_fup_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
-    fup_fit = TRF_fit.TRFfit(pspl_fup)
-    fup_fit.fit()
-    best_params = fup_fit.fit_results['best_model']
-    chi2 = fup_fit.fit_results['chi2']
+    try:
+        pspl_fup = PSPL_model.PSPLmodel(gaia_fup_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
+        fup_fit = TRF_fit.TRFfit(pspl_fup)
+        fup_fit.fit()
+        best_params = fup_fit.fit_results['best_model']
+        chi2 = fup_fit.fit_results['chi2']
+    except:
+        print("exeption happened: fitting")
+        best_params = np.zeros(6)
+        chi2 = 0.
 
     # Plots
     # times for plot
