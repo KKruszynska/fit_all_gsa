@@ -155,7 +155,7 @@ for i in range(len(names)):
             text = survey_name.split('-')
             year = text[1]
             field = moa_names[idx, 2][0]
-            moa_times, moa_mags, moa_errs = mud.get_lightcurve_MOA(survey_name, field)
+            # moa_times, moa_mags, moa_errs = mud.get_lightcurve_MOA(survey_name, field)
             output.write("<br><a href='http://www.massey.ac.nz/~iabond/moa/alert%s/display.php?id=%s'>%s</a>\n"%(year, field, survey_name))
 
     if len(asassn_names) > 0 and publishedas in asassn_names[:, 0]:
@@ -206,21 +206,21 @@ for i in range(len(names)):
     print("%s: %s: Gaia data added.\n" % (datetime.utcnow(), publishedas))
 
     # MOA
-    if (type(moa_times) is not int):
-        moa_data = np.vstack((moa_times, moa_mags, moa_errs))
-        datasets.append(moa_data)
-        telescope_labels.append("MOA")
-        if(t_last < moa_times[-1]):
-            t_last = moa_times[-1]
-
-        telescope_moa = telescopes.Telescope(name='MOA',
-                                             light_curve=(moa_times, moa_mags, moa_errs),
-                                             light_curve_names=['time', 'flux', 'err_flux'],
-                                             light_curve_units=['JD', 'flux', 'err_flux'],
-                                             location='Earth')
-        gaia_fup_event.telescopes.append(telescope_moa)
-        n_telescopes += 1
-        print("%s : %s: MOA data added.\n" % (datetime.utcnow(), publishedas))
+    # if (type(moa_times) is not int):
+    #     moa_data = np.vstack((moa_times, moa_mags, moa_errs))
+    #     datasets.append(moa_data)
+    #     telescope_labels.append("MOA")
+    #     if(t_last < moa_times[-1]):
+    #         t_last = moa_times[-1]
+    #
+    #     telescope_moa = telescopes.Telescope(name='MOA',
+    #                                          light_curve=(moa_times, moa_mags, moa_errs),
+    #                                          light_curve_names=['time', 'flux', 'err_flux'],
+    #                                          light_curve_units=['JD', 'flux', 'err_flux'],
+    #                                          location='Earth')
+    #     gaia_fup_event.telescopes.append(telescope_moa)
+    #     n_telescopes += 1
+    #     print("%s : %s: MOA data added.\n" % (datetime.utcnow(), publishedas))
 
     # OGLE EWS
     if (type(ogle_times) is not int):
