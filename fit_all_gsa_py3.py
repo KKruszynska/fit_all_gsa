@@ -282,17 +282,18 @@ for i in range(len(names)):
     gaia_fup_event.find_survey('Gaia')
     gaia_fup_event.check_event()
 
-    # Initial guess
-    data_smooth = savgol_filter(gaia_mags, 14, 4)
-    t0guess = gaia_mags[np.argmin(data_smooth)]
-
-    # Fit PSPL without blending to Gaia only data
-    # pspl_gaia = PSPL_model.PSPLmodel(gaia_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
-    # gaia_fit = TRF_fit.TRFfit(pspl_gaia)
-    # gaia_fit.fit()
-
-    # Fit PSPL without blending to Gaia only data
     try:
+        # Initial guess
+        data_smooth = savgol_filter(gaia_mags, 14, 4)
+        t0guess = gaia_mags[np.argmin(data_smooth)]
+
+        # Fit PSPL without blending to Gaia only data
+        # pspl_gaia = PSPL_model.PSPLmodel(gaia_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
+        # gaia_fit = TRF_fit.TRFfit(pspl_gaia)
+        # gaia_fit.fit()
+
+        # Fit PSPL without blending to Gaia only data
+
         pspl_fup = PSPL_model.PSPLmodel(gaia_fup_event, parallax=['Full', t0guess], blend_flux_parameter='noblend')
         fup_fit = TRF_fit.TRFfit(pspl_fup)
         fup_fit.fit()
