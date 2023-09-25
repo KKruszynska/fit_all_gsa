@@ -151,6 +151,7 @@ for i in range(len(names)):
         indexes = np.where(moa_names[:, 0] == publishedas)
         for idx in indexes:
             survey_name = moa_names[idx, 1]
+            print(survey_name)
             text = survey_name.split('-')
             year = text[1]
             field = moa_names[idx, 2]
