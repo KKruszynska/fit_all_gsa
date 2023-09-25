@@ -154,7 +154,7 @@ for i in range(len(names)):
             print(survey_name)
             text = survey_name.split('-')
             year = text[1]
-            field = moa_names[idx, 2]
+            field = moa_names[idx, 2][0]
             moa_times, moa_mags, moa_errs = mud.get_lightcurve_MOA(survey_name, field)
             output.write("<br><a href='http://www.massey.ac.nz/~iabond/moa/alert%s/display.php?id=%s'>%s</a>\n"%(year, field, survey_name))
 
