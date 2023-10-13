@@ -222,6 +222,8 @@ def get_lightcurve_OGLE_EWS(name):
 
     if(text[2] == "BLG"):
         url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/blg-%s/phot.dat") % (year, num)
+    elif(text[2] == "GD"):
+        url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/gd-%s/phot.dat") % (year, num)
     else:
         url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/dg-%s/phot.dat") % (year, num)
 
