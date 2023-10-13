@@ -79,7 +79,6 @@ for i in range(len(names)):
     if(hcz_zone):
         if (i in idx_in_kmtn_zone):
             print("%s: Within KMTNet exclusion zone"%(names[i]))
-            count += 1
             continue
     else:
         if (i in idx_in_kmtn_zone):
@@ -88,7 +87,7 @@ for i in range(len(names)):
             comment_hcz = '<font color="black">Outside HCZ</font>'
 
 
-    if(count % 100 == 0):
+    if(i % 100 == 0):
         output_file_name = "%s_part_%d.html" % (base_file_output_name, num_file)
         print("Num file: ", num_file)
         output = open(output_file_name, "w")
