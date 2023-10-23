@@ -156,6 +156,7 @@ def get_lightcurve_gaia(name):
                         times.append(float(col[1]))
                         mags.append(float(col[2]))
         return np.array(times), np.array(mags)
+
     except requests.HTTPError as exception:
         print(exception)
         return 0,0
@@ -237,6 +238,7 @@ def get_lightcurve_OGLE_EWS(name):
         # print(ogleLc)
         data = ogleLc.to_numpy()
         return data[:, 0], data[:, 1], data[:, 2]
-    requests.HTTPError as exception:
+
+    except requests.HTTPError as exception:
         print(exception)
         return 0,0,0
