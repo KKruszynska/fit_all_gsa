@@ -139,22 +139,26 @@ def get_lightcurve_ZTF_DR(ra, dec):
 
 def get_lightcurve_gaia(name):
     url = ("http://gsaweb.ast.cam.ac.uk/alerts/alert/%s/lightcurve.csv") % (name)
-    req = requests.get(url)
-    text = req.text
-    lines = text.split('\n')
-    times = []
-    mags = []
 
-    for l in lines:
-        col = l.split(',')
-        # print(col)
-        if (len(col) > 1):
-            if (len(col) == 3 and (col[1] != 'JD(TCB)')):
-                if (col[2] != 'null' and col[2] != 'untrusted'):
-                    times.append(float(col[1]))
-                    mags.append(float(col[2]))
-    return np.array(times), np.array(mags)
+    try:
+        req = requests.get(url)
+        text = req.text
+        lines = text.split('\n')
+        times = []
+        mags = []
 
+        for l in lines:
+            col = l.split(',')
+            # print(col)
+            if (len(col) > 1):
+                if (len(col) == 3 and (col[1] != 'JD(TCB)')):
+                    if (col[2] != 'null' and col[2] != 'untrusted'):
+                        times.append(float(col[1]))
+                        mags.append(float(col[2]))
+        return np.array(times), np.array(mags)
+    except requests.HTTPError as exception:
+        print(exception)
+        return 0,0
 
 def get_gaia_errors(mag):
     a1 = 0.2
@@ -227,8 +231,12 @@ def get_lightcurve_OGLE_EWS(name):
     else:
         url = ("http://www.astrouw.edu.pl/ogle/ogle4/ews/%s/dg-%s/phot.dat") % (year, num)
 
-    req = requests.get(url).content
-    ogleLc = pd.read_csv(io.StringIO(req.decode('utf-8')), delimiter=" ", header=None)
-    # print(ogleLc)
-    data = ogleLc.to_numpy()
-    return data[:, 0], data[:, 1], data[:, 2]
+    try:
+        req = requests.get(url).content
+        ogleLc = pd.read_csv(io.StringIO(req.decode('utf-8')), delimiter=" ", header=None)
+        # print(ogleLc)
+        data = ogleLc.to_numpy()
+        return data[:, 0], data[:, 1], data[:, 2]
+    requests.HTTPError as exception:
+        print(exception)
+        return 0,0,0
