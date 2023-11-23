@@ -9,3 +9,4 @@ pyLIMA==1.9.2
 Requests==2.31.0
 scipy==1.11.2
 Shapely==2.0.1
+lxml==4.9.3
