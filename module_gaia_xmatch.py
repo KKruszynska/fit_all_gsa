@@ -99,7 +99,7 @@ def moa_xmatch(names, ra, dec):
             xmatch_result.append(
                 (names[idxc[i]], "MOA-%s"%alert_table["Name"].values[idxcatalog[i]], alert_table["Field"].values[idxcatalog[i]]))
 
-    for year in [2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024]:
+    for year in [2016, 2018, 2019, 2020, 2021, 2022, 2023]:
         url = r'http://www.massey.ac.nz/~iabond/moa/alert%d/index.dat' % (year)
         tables = pd.read_csv(url, delimiter=" ", header=None)  # Returns list of all tables on page
         nan_value = float("NaN")  # Nan value to convert from empty string
