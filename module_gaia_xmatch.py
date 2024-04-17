@@ -20,7 +20,7 @@ def ogle_xmatch(names, ra, dec):
     """
     rad = 1.0 / 60. / 60.  # 0.5 arcsec search radius
     xmatch_result = []
-    ogle_years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2022, 2023]
+    ogle_years = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2022, 2023, 2024]
     for year in ogle_years:
         url = r'https://www.astrouw.edu.pl/ogle/ogle4/ews/%d/lenses.par' % year
         tables = pd.read_csv(url, header=0, delim_whitespace=True)
@@ -48,7 +48,7 @@ def kmtn_xmatch(names, ra, dec):
     """
     rad = 1.0 / 60. / 60.  # 0.5 arcsec search radius
     xmatch_result = []
-    kmtn_years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
+    kmtn_years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
     for year in kmtn_years:
         url = r'https://kmtnet.kasi.re.kr/~ulens/event/%d/' % (year)
@@ -99,7 +99,7 @@ def moa_xmatch(names, ra, dec):
             xmatch_result.append(
                 (names[idxc[i]], "MOA-%s"%alert_table["Name"].values[idxcatalog[i]], alert_table["Field"].values[idxcatalog[i]]))
 
-    for year in [2016, 2018, 2019, 2020, 2021, 2022, 2023]:
+    for year in [2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024]:
         url = r'http://www.massey.ac.nz/~iabond/moa/alert%d/index.dat' % (year)
         tables = pd.read_csv(url, delimiter=" ", header=None)  # Returns list of all tables on page
         nan_value = float("NaN")  # Nan value to convert from empty string
