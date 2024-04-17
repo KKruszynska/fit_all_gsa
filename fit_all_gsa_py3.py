@@ -60,7 +60,7 @@ idx_in_kmtn_zone = exclude_KMTNet_fields(names, ra, dec)
 ogle_names = np.asarray(ogle_xmatch(names, ra, dec))
 kmtn_names = np.asarray(kmtn_xmatch(names, ra, dec))
 moa_names = np.asarray(moa_xmatch(names, ra, dec))
-asassn_names = np.asarray(asassn_xmatch(names, ra, dec))
+#asassn_names = np.asarray(asassn_xmatch(names, ra, dec))
 
 # #SETUP
 searchradnei = 0.7 / 60 / 60  # neighbours #was 0.1
@@ -157,11 +157,11 @@ for i in range(len(names)):
             # moa_times, moa_mags, moa_errs = mud.get_lightcurve_MOA(survey_name, field)
             output.write("<br><a href='http://www.massey.ac.nz/~iabond/moa/alert%s/display.php?id=%s'>%s</a>\n"%(year, field, survey_name))
 
-    if len(asassn_names) > 0 and publishedas in asassn_names[:, 0]:
-        indexes = np.where(asassn_names[:, 0] == publishedas)
-        for idx in indexes:
-            survey_name = asassn_names[idx, 1]
-            output.write("<br>%s" %(survey_name))
+    #if len(asassn_names) > 0 and publishedas in asassn_names[:, 0]:
+    #    indexes = np.where(asassn_names[:, 0] == publishedas)
+    #    for idx in indexes:
+    #        survey_name = asassn_names[idx, 1]
+    #        output.write("<br>%s" %(survey_name))
 
     output.write('</td>')
 
