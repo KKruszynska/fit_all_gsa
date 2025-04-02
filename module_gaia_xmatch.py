@@ -7,6 +7,9 @@ import astropy.units as u
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
+import ssl
+
+ssl._create_default_https_context = ssl._create_stdlib_context
 
 def ogle_xmatch(names, ra, dec):
     """
@@ -67,6 +70,7 @@ def kmtn_xmatch(names, ra, dec):
 def moa_xmatch(names, ra, dec):
     """
     Returns a list of Gaia alert names and corresponding MOA alerts.
+    Warning! MOA alerts webpages for 2013-2015 dont work anymore
 
     Args:
         - names string - name of Gaia alert
@@ -82,62 +86,93 @@ def moa_xmatch(names, ra, dec):
     c = SkyCoord(ra=ra * u.degree,
                  dec=dec * u.degree)
 
-    for year in [2013, 2014, 2015]:
-        url = r'http://www.massey.ac.nz/~iabond/moa/alerts/listevents.php?year=%d' % (year)
-        tables = pd.read_html(url)  # Returns list of all tables on page
-        nan_value = float("NaN") # Nan value to convert from empty string
-        tables[0].replace("", nan_value, inplace=True)
-        tables[0].columns = ["Name", "Field", "RA", "Dec"]
-        alert_table = tables[0].dropna(subset=["RA", "Dec"])
+    # for year in [2013, 2014, 2015]:
+    #     url = r'http://www.massey.ac.nz/~iabond/moa/alerts/listevents.php?year=%d' % (year)
+    #     tables = pd.read_html(url)  # Returns list of all tables on page
+    #     nan_value = float("NaN") # Nan value to convert from empty string
+    #     tables[0].replace("", nan_value, inplace=True)
+    #     tables[0].columns = ["Name", "Field", "RA", "Dec"]
+    #     alert_table = tables[0].dropna(subset=["RA", "Dec"])
+    #
+    #     catalog = SkyCoord(ra=alert_table.values[:, 2],
+    #                        dec=alert_table.values[:, 3], unit=(u.hourangle, u.deg))
+    #
+    #     idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.deg)
+    #
+    #     for i in range(len(idxc)):
+    #         xmatch_result.append(
+    #             (names[idxc[i]], "MOA-%s"%alert_table["Name"].values[idxcatalog[i]], alert_table["Field"].values[idxcatalog[i]]))
 
-        catalog = SkyCoord(ra=alert_table.values[:, 2],
-                           dec=alert_table.values[:, 3], unit=(u.hourangle, u.deg))
-
-        idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.deg)
-
-        for i in range(len(idxc)):
-            xmatch_result.append(
-                (names[idxc[i]], "MOA-%s"%alert_table["Name"].values[idxcatalog[i]], alert_table["Field"].values[idxcatalog[i]]))
-
-    for year in [2016, 2018, 2019, 2020, 2021, 2022, 2023]:
-        url = r'http://www.massey.ac.nz/~iabond/moa/alert%d/index.dat' % (year)
-        tables = pd.read_csv(url, delimiter=" ", header=None)  # Returns list of all tables on page
-        nan_value = float("NaN")  # Nan value to convert from empty string
-        tables.replace("", nan_value, inplace=True)
-        tables.columns = ["Name", "Field", "RA", "Dec", "t0", "te", "u0", "p1", "p2", "p3" ]
-        alert_table = tables.dropna(subset=["RA", "Dec"])
-        catalog = SkyCoord(ra=alert_table["RA"].values * u.degree,
-                           dec=alert_table["Dec"].values * u.degree)
-
-        idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.degree)
-
-        for i in range(len(idxc)):
-            xmatch_result.append(
-                (names[idxc[i]], "MOA-%s"%alert_table["Name"].values[idxcatalog[i]], alert_table["Field"].values[idxcatalog[i]]))
-
-    # Oby osobę, która jest za to odpowiedzialna, ścisnęły drzwi >:[
-    year = 2017
-
-    url = r'http://www.massey.ac.nz/~iabond/moa/alert%d/index.dat' % (year)
-    tables1 = pd.read_csv(url, delimiter=" ", header=None)  # Tables with names and fields
-    tables1.columns = ["Name", "Field", "Date"]
-
-    url = r'http://www.massey.ac.nz/~iabond/moa/alert%s/alert.php/' % (year) # Table with names and coordinates
-    tables2 = pd.read_html(url)  # Returns list of all tables on page
+    # for year in [2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024]:
+    # url = r'http://www.massey.ac.nz/~iabond/moa/alert%d/index.dat' % (year)
+    url = r'https://moaprime.massey.ac.nz/alerts/index/moa/2025'
+    # tables = pd.read_csv(url, delimiter=" ", header=None)  # Returns list of all tables on page
+    tables = pd.read_html(url) # Returns list of all tables on page
     nan_value = float("NaN")  # Nan value to convert from empty string
-    tables2[0].replace("", nan_value, inplace=True)
-    alert_table = tables2[0].dropna(subset=["RA (J2000.0)", "Dec (J2000.0)"])
-
-    catalog = SkyCoord(ra=alert_table["RA (J2000.0)"],
-                       dec=alert_table["Dec (J2000.0)"], unit=(u.hourangle, u.deg))
+    tables[0].replace("", nan_value, inplace=True)
+    tables[0].columns = ["Name", "Alert_Date", "RA", "Dec", "t0", "te", "Amax", "I0"]
+    alert_table = tables[0].dropna(subset=["RA", "Dec"])
+    catalog = SkyCoord(ra=alert_table["RA"].values[:], dec=alert_table["Dec"].values[:], unit=(u.hourangle, u.deg))
 
     idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.degree)
 
     for i in range(len(idxc)):
-        name = alert_table["ID"].values[idxcatalog[i]]
-        field = tables1.loc[tables1["Name"] == name]["Field"]
         xmatch_result.append(
-            (names[idxc[i]], "MOA-%s"%name, field))
+            (names[idxc[i]], "MOA-%s"%alert_table["Name"].values[idxcatalog[i]]))
+
+    # Prime Alerts 2024
+    url = r'https://moaprime.massey.ac.nz/prime2024'
+    tables = pd.read_html(url)  # Returns list of all tables on page
+    nan_value = float("NaN")  # Nan value to convert from empty string
+    tables[0].replace("", nan_value, inplace=True)
+    tables[0].columns = ["Name", "InternalID", "RA", "Dec", "t0", "te", "Amax"]
+    alert_table = tables[0].dropna(subset=["RA", "Dec"])
+    catalog = SkyCoord(ra=alert_table["RA"].values[:], dec=alert_table["Dec"].values[:], unit=(u.hourangle, u.deg))
+
+    idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.degree)
+
+    for i in range(len(idxc)):
+        xmatch_result.append(
+            (names[idxc[i]], "PRIME-%s" % alert_table["Name"].values[idxcatalog[i]]))
+
+    # PRIME Alerts 2025
+    url = r'https://moaprime.massey.ac.nz/alerts/index/prime/2025'
+    tables = pd.read_html(url)  # Returns list of all tables on page
+    nan_value = float("NaN")  # Nan value to convert from empty string
+    tables[0].replace("", nan_value, inplace=True)
+    tables[0].columns = ["Name", "AlertDate", "RA", "Dec", "t0", "te", "Amax", "H0"]
+    alert_table = tables[0].dropna(subset=["RA", "Dec"])
+    catalog = SkyCoord(ra=alert_table["RA"].values[:], dec=alert_table["Dec"].values[:], unit=(u.hourangle, u.deg))
+
+    idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.degree)
+
+    for i in range(len(idxc)):
+        xmatch_result.append(
+            (names[idxc[i]], "PRIME-%s" % alert_table["Name"].values[idxcatalog[i]]))
+
+    # Oby osobę, która jest za to odpowiedzialna, ścisnęły drzwi >:[
+    # year = 2017
+    #
+    # url = r'http://www.massey.ac.nz/~iabond/moa/alert%d/index.dat' % (year)
+    # tables1 = pd.read_csv(url, delimiter=" ", header=None)  # Tables with names and fields
+    # tables1.columns = ["Name", "Field", "Date"]
+    #
+    # url = r'http://www.massey.ac.nz/~iabond/moa/alert%s/alert.php/' % (year) # Table with names and coordinates
+    # tables2 = pd.read_html(url)  # Returns list of all tables on page
+    # nan_value = float("NaN")  # Nan value to convert from empty string
+    # tables2[0].replace("", nan_value, inplace=True)
+    # alert_table = tables2[0].dropna(subset=["RA (J2000.0)", "Dec (J2000.0)"])
+    #
+    # catalog = SkyCoord(ra=alert_table["RA (J2000.0)"],
+    #                    dec=alert_table["Dec (J2000.0)"], unit=(u.hourangle, u.deg))
+    #
+    # idxc, idxcatalog, d2d, d3d = catalog.search_around_sky(c, rad * u.degree)
+    #
+    # for i in range(len(idxc)):
+    #     name = alert_table["ID"].values[idxcatalog[i]]
+    #     field = tables1.loc[tables1["Name"] == name]["Field"]
+    #     xmatch_result.append(
+    #         (names[idxc[i]], "MOA-%s"%name, field))
 
     return xmatch_result
 

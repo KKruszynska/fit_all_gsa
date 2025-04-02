@@ -20,36 +20,38 @@ from module_ulens_plots import plot_lightcurve, plot_data, plot_sdss, plot_xmatc
 import module_ulens_data as mud
 
 # Defalut settings: events from last two weeks
-time_max = datetime.today()
-time_min = time_max - timedelta(days=14)
-base_file_output_name = "new_candidates"
-hcz_zone = True
+hcz_zone = False
 
-if (len(sys.argv) not in [4, 5] and len(sys.argv) != 1):
-    print("Wrong number of arguments. Provide start date, end date and output file name base.")
-    print("Run program as follows:")
-    print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base")
-    print("Or, to turn off high-cadence zone exlusion:")
-    print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base hcz_zone=False")
-    quit()
-if(len(sys.argv) == 4):
-    time_min = sys.argv[1] # has to be yyyy-mm-dd
-    time_max = sys.argv[2] # has to be yyyy-mm-dd
-    base_file_output_name = sys.argv[3]
-if(len(sys.argv) == 5):
-    time_min = sys.argv[1] # has to be yyyy-mm-dd
-    time_max = sys.argv[2] # has to be yyyy-mm-dd
-    base_file_output_name = sys.argv[3]
-    if (sys.argv[4].split("=")[1] == 'False'):
-        hcz_zone = False
-    else:
-        print("High cadence zone not turned off!")
-        print("To turn off high-cadence zone exlusion:")
-        print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base hcz_zone=False")
-        quit()
+in_file = sys.argv[1]
+base_file_output_name = in_file.split(".")[0]
+
+# if (len(sys.argv) not in [4, 5] and len(sys.argv) != 1):
+#     print("Wrong number of arguments. Provide start date, end date and output file name base.")
+#     print("Run program as follows:")
+#     print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base")
+#     print("Or, to turn off high-cadence zone exlusion:")
+#     print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base hcz_zone=False")
+#     quit()
+# if(len(sys.argv) == 4):
+#     time_min = sys.argv[1] # has to be yyyy-mm-dd
+#     time_max = sys.argv[2] # has to be yyyy-mm-dd
+#     base_file_output_name = sys.argv[3]
+# if(len(sys.argv) == 5):
+#     time_min = sys.argv[1] # has to be yyyy-mm-dd
+#     time_max = sys.argv[2] # has to be yyyy-mm-dd
+#     base_file_output_name = sys.argv[3]
+#     if (sys.argv[4].split("=")[1] == 'False'):
+#         hcz_zone = False
+#     else:
+#         print("High cadence zone not turned off!")
+#         print("To turn off high-cadence zone exlusion:")
+#         print("python fit_all_gsa_py3.py yyyy-mm-dd yyyy-mm-dd output_file_name_base hcz_zone=False")
+#         quit()
 
 # find events in the required time range
-names, ra, dec = mud.select_gsa_events(time_min, time_max)
+# names, ra, dec = mud.select_gsa_events(time_min, time_max)
+names = np.genfromtxt(in_file, delimiter=",", usecols=0, dtype="str")
+ra, dec = np.genfromtxt(in_file, delimiter=",", usecols=(1,2), unpack=True)
 print("Candidate names:")
 print(names)
 
@@ -59,8 +61,10 @@ idx_in_kmtn_zone = exclude_KMTNet_fields(names, ra, dec)
 #cross-match with other surveys (OGLE, MOA, KMTNet, ASASSN)
 ogle_names = np.asarray(ogle_xmatch(names, ra, dec))
 kmtn_names = np.asarray(kmtn_xmatch(names, ra, dec))
-#moa_names = np.asarray(moa_xmatch(names, ra, dec))
-#asassn_names = np.asarray(asassn_xmatch(names, ra, dec))
+moa_names = np.asarray(moa_xmatch(names, ra, dec))
+asassn_names = np.asarray(asassn_xmatch(names, ra, dec))
+
+print(moa_names)
 
 # #SETUP
 searchradnei = 0.7 / 60 / 60  # neighbours #was 0.1
@@ -145,23 +149,23 @@ for i in range(len(names)):
             num = text[3]
             output.write("<br><a href='http://ogle.astrouw.edu.pl/ogle4/ews/%s/blg-%s.html'>%s</a>"%(year, num, survey_name))
 
-    #moa_times, moa_mags, moa_errs = 0,0,0
-    #if len(moa_names) > 0 and publishedas in moa_names[:, 0]:
-    #    indexes = np.where(moa_names[:, 0] == publishedas)
-    #    for idx in indexes:
-    #        survey_name = moa_names[idx, 1][0]
-    #        print(survey_name)
-    #        text = survey_name.split('-')
-    #        year = text[1]
-    #        field = moa_names[idx, 2][0]
-    #        # moa_times, moa_mags, moa_errs = mud.get_lightcurve_MOA(survey_name, field)
-    #        output.write("<br><a href='http://www.massey.ac.nz/~iabond/moa/alert%s/display.php?id=%s'>%s</a>\n"%(year, field, survey_name))
+    moa_times, moa_mags, moa_errs = 0,0,0
+    if len(moa_names) > 0 and publishedas in moa_names[:, 0]:
+       indexes = np.where(moa_names[:, 0] == publishedas)
+       for idx in indexes:
+           survey_name = moa_names[idx, 1][0]
+           print(survey_name)
+           text = survey_name.split('-')
+           year = text[1]
+           field = moa_names[idx, 2][0]
+           # moa_times, moa_mags, moa_errs = mud.get_lightcurve_MOA(survey_name, field)
+           output.write("<br>%s\n"%(survey_name))
 
-    #if len(asassn_names) > 0 and publishedas in asassn_names[:, 0]:
-    #    indexes = np.where(asassn_names[:, 0] == publishedas)
-    #    for idx in indexes:
-    #        survey_name = asassn_names[idx, 1]
-    #        output.write("<br>%s" %(survey_name))
+    if len(asassn_names) > 0 and publishedas in asassn_names[:, 0]:
+       indexes = np.where(asassn_names[:, 0] == publishedas)
+       for idx in indexes:
+           survey_name = asassn_names[idx, 1]
+           output.write("<br>%s" %(survey_name))
 
     output.write('</td>')
 
@@ -206,6 +210,20 @@ for i in range(len(names)):
 
     # MOA
     # if (type(moa_times) is not int):
+    #     moa_data = np.vstack((moa_times, moa_mags, moa_errs))
+    #     datasets.append(moa_data)
+    #     telescope_labels.append("MOA")
+    #     if(t_last < moa_times[-1]):
+    #         t_last = moa_times[-1]
+    #
+    #     telescope_moa = telescopes.Telescope(name='MOA',
+    #                                          light_curve=(moa_times, moa_mags, moa_errs),
+    #                                          light_curve_names=['time', 'flux', 'err_flux'],
+    #                                          light_curve_units=['JD', 'flux', 'err_flux'],
+    #                                          location='Earth')
+    #     gaia_fup_event.telescopes.append(telescope_moa)
+    #     n_telescopes += 1
+    #     print("%s : %s: MOA data added.\n" % (datetime.utcnow(), publishedas))if (type(moa_times) is not int):
     #     moa_data = np.vstack((moa_times, moa_mags, moa_errs))
     #     datasets.append(moa_data)
     #     telescope_labels.append("MOA")

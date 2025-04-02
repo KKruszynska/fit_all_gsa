@@ -24,6 +24,8 @@ def select_gsa_events(time_min, time_max):
     # download alerts from the GSA webpage
     url = r'http://gsaweb.ast.cam.ac.uk/alerts/alerts.csv'
     tables = pd.read_csv(url)  # Returns list of all tables on page
+    print(tables)
+
     # get names of the alerts
     names = tables["#Name"]
     # timestamps of when alert was published
